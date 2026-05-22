@@ -13,6 +13,7 @@ interface Report {
 export default function HomePage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewing, setViewing] = useState<Report | null>(null);
 
   useEffect(() => {
     fetch("/api/reports")
@@ -28,6 +29,7 @@ export default function HomePage() {
     if (!confirm("确定删除此周报？")) return;
     await fetch(`/api/reports?id=${id}`, { method: "DELETE" });
     setReports(reports.filter((r) => r.id !== id));
+    setViewing(null);
   };
 
   const handleExport = async (id: number) => {
@@ -48,10 +50,7 @@ export default function HomePage() {
           <p className="section-label">Weekly Report</p>
           <h1 className="page-title">周报</h1>
         </div>
-        <a
-          href="/generate"
-          className="btn btn-primary"
-        >
+        <a href="/generate" className="btn btn-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -90,7 +89,8 @@ export default function HomePage() {
         {reports.map((report, i) => (
           <div
             key={report.id}
-            className={`card p-5 animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
+            className={`card p-5 animate-fade-in-up stagger-${Math.min(i + 1, 8)} cursor-pointer`}
+            onClick={() => setViewing(report)}
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export default function HomePage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => handleExport(report.id)} className="btn-ghost">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -128,6 +128,58 @@ export default function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* Modal overlay */}
+      {viewing && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          onClick={() => setViewing(null)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-3xl max-h-[85vh] flex flex-col bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-2xl animate-fade-in-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-8 rounded-full bg-[var(--accent)]" />
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                    {formatDate(viewing.week_start)} ~ {formatDate(viewing.week_end)}
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    {new Date(viewing.created_at).toLocaleString("zh-CN")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => handleExport(viewing.id)} className="btn btn-secondary text-xs py-1.5 px-3">
+                  导出
+                </button>
+                <button onClick={() => { handleDelete(viewing.id); }} className="btn-danger btn text-xs py-1.5 px-3">
+                  删除
+                </button>
+                <button
+                  onClick={() => setViewing(null)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {/* Modal body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <pre className="text-sm text-[var(--text-primary)] whitespace-pre-wrap font-mono leading-relaxed">
+                {viewing.content}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
