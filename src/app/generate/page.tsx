@@ -175,7 +175,7 @@ export default function GeneratePage() {
             ) : (
               <div className="space-y-1">
                 {repos.map((repo) => (
-                  <label key={repo.id} className="checkbox-wrapper">
+                  <label key={repo.id} className="checkbox-wrapper" onClick={() => toggleRepo(repo.id)}>
                     <div className={`checkbox-custom ${selectedRepoIds.includes(repo.id) ? "checked" : ""}`} />
                     <span className="text-[var(--text-primary)] text-sm">{repo.name}</span>
                     <span className="text-xs text-[var(--text-muted)] font-mono">{repo.path}</span>
@@ -200,7 +200,7 @@ export default function GeneratePage() {
               </div>
               <div className="space-y-1">
                 {members.map((member) => (
-                  <label key={member.id} className="checkbox-wrapper">
+                  <label key={member.id} className="checkbox-wrapper" onClick={() => toggleMember(member.id)}>
                     <div className={`checkbox-custom ${selectedMemberIds.includes(member.id) ? "checked" : ""}`} />
                     <span className="text-[var(--text-primary)] text-sm">{member.display_name || member.name}</span>
                     <span className="text-xs text-[var(--text-muted)]">{member.email}</span>
