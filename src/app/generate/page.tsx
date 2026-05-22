@@ -131,83 +131,102 @@ export default function GeneratePage() {
     alert(`已导出到: ${res.filePath}`);
   };
 
+  const stepLabels = ["选择范围", "确认提交", "周报预览"];
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">生成周报</h1>
+      {/* Header */}
+      <div className="mb-8 animate-fade-in-up">
+        <p className="section-label">Generate</p>
+        <h1 className="page-title">生成周报</h1>
+      </div>
 
       {/* Step indicators */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex items-center gap-0 mb-10 animate-fade-in-up stagger-1">
         {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step >= s ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
-            }`}
-          >
-            {s}
+          <div key={s} className="flex items-center">
+            <div className={`step-dot ${step === s ? "active" : step > s ? "completed" : "inactive"}`}>
+              {step > s ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : s}
+            </div>
+            {s < 3 && <div className={`step-line ${step > s ? "active" : ""}`} />}
           </div>
         ))}
+        <div className="ml-4 text-sm text-[var(--text-muted)]">{stepLabels[step - 1]}</div>
       </div>
 
       {/* Step 1: Select repos, members, date range */}
       {step === 1 && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="font-semibold mb-3">选择仓库</h2>
-            {repos.map((repo) => (
-              <label key={repo.id} className="flex items-center gap-2 mb-2">
-                <input
-                  type="checkbox"
-                  checked={selectedRepoIds.includes(repo.id)}
-                  onChange={() => toggleRepo(repo.id)}
-                />
-                <span>{repo.name}</span>
-                <span className="text-sm text-gray-500">{repo.path}</span>
-              </label>
-            ))}
-            {repos.length === 0 && (
-              <p className="text-gray-500">暂无仓库，请先<a href="/repos" className="text-blue-600">添加仓库</a>。</p>
+        <div className="space-y-6 animate-fade-in-up stagger-2">
+          {/* Repos */}
+          <div className="card p-5">
+            <p className="section-label">Repositories</p>
+            <h2 className="text-base font-semibold text-[var(--text-primary)] mb-4">选择仓库</h2>
+            {repos.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="text-[var(--text-muted)] text-sm">
+                  暂无仓库，请先
+                  <a href="/repos" className="text-[var(--accent)] hover:underline ml-1">添加仓库</a>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {repos.map((repo) => (
+                  <label key={repo.id} className="checkbox-wrapper">
+                    <div className={`checkbox-custom ${selectedRepoIds.includes(repo.id) ? "checked" : ""}`} />
+                    <span className="text-[var(--text-primary)] text-sm">{repo.name}</span>
+                    <span className="text-xs text-[var(--text-muted)] font-mono">{repo.path}</span>
+                  </label>
+                ))}
+              </div>
             )}
           </div>
 
+          {/* Members */}
           {selectedRepoIds.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h2 className="font-semibold mb-3">选择成员</h2>
-              {members.map((member) => (
-                <label key={member.id} className="flex items-center gap-2 mb-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedMemberIds.includes(member.id)}
-                    onChange={() => toggleMember(member.id)}
-                  />
-                  <span>{member.display_name || member.name}</span>
-                  <span className="text-sm text-gray-500">{member.email}</span>
-                </label>
-              ))}
-              <button
-                onClick={() => setSelectedMemberIds(members.map((m) => m.id))}
-                className="text-sm text-blue-600 hover:underline mt-2"
-              >
-                全选
-              </button>
+            <div className="card p-5 animate-fade-in-up stagger-3">
+              <p className="section-label">Members</p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">选择成员</h2>
+                <button
+                  onClick={() => setSelectedMemberIds(members.map((m) => m.id))}
+                  className="btn-ghost text-xs"
+                >
+                  全选
+                </button>
+              </div>
+              <div className="space-y-1">
+                {members.map((member) => (
+                  <label key={member.id} className="checkbox-wrapper">
+                    <div className={`checkbox-custom ${selectedMemberIds.includes(member.id) ? "checked" : ""}`} />
+                    <span className="text-[var(--text-primary)] text-sm">{member.display_name || member.name}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{member.email}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="font-semibold mb-3">时间范围</h2>
-            <div className="flex gap-3">
+          {/* Date range */}
+          <div className="card p-5 animate-fade-in-up stagger-4">
+            <p className="section-label">Date Range</p>
+            <h2 className="text-base font-semibold text-[var(--text-primary)] mb-4">时间范围</h2>
+            <div className="flex items-center gap-3">
               <input
                 type="date"
                 value={since}
                 onChange={(e) => setSince(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-sm"
+                className="input"
               />
-              <span className="py-2">~</span>
+              <span className="text-[var(--text-muted)]">~</span>
               <input
                 type="date"
                 value={until}
                 onChange={(e) => setUntil(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-sm"
+                className="input"
               />
             </div>
           </div>
@@ -215,27 +234,43 @@ export default function GeneratePage() {
           <button
             onClick={handleFetchCommits}
             disabled={selectedRepoIds.length === 0 || loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            className="btn btn-primary"
           >
-            {loading ? "查询中..." : "查询提交记录"}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12"/>
+                </svg>
+                查询中...
+              </span>
+            ) : "查询提交记录"}
           </button>
         </div>
       )}
 
       {/* Step 2: Review commits */}
       {step === 2 && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="font-semibold mb-3">提交记录 ({commits.length} 条)</h2>
+        <div className="space-y-5 animate-fade-in-up">
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                提交记录
+              </h2>
+              <span className="badge badge-accent">{commits.length} 条</span>
+            </div>
             {commits.length === 0 ? (
-              <p className="text-gray-500">所选时间范围内无提交记录。</p>
+              <div className="py-8 text-center">
+                <p className="text-[var(--text-muted)]">所选时间范围内无提交记录</p>
+              </div>
             ) : (
-              <div className="max-h-96 overflow-y-auto space-y-2">
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
                 {commits.map((c, i) => (
-                  <div key={i} className="text-sm border-b border-gray-100 pb-2">
-                    <span className="text-gray-500">{c.date.slice(0, 10)}</span>{" "}
-                    <span className="text-gray-400">{c.authorName}</span>{" "}
-                    <span>{c.message}</span>
+                  <div key={i} className="flex items-start gap-3 py-2 border-b border-[var(--border-subtle)] last:border-0 animate-slide-in" style={{ animationDelay: `${i * 0.02}s` }}>
+                    <span className="text-xs text-[var(--text-muted)] font-mono whitespace-nowrap mt-0.5">{c.date.slice(0, 10)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[var(--text-primary)] truncate">{c.message}</p>
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">{c.authorName}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -243,15 +278,22 @@ export default function GeneratePage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep(1)} className="border border-gray-300 px-4 py-2 rounded text-sm">
+            <button onClick={() => setStep(1)} className="btn btn-secondary">
               返回修改
             </button>
             <button
               onClick={handleGenerate}
               disabled={commits.length === 0 || loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+              className="btn btn-primary"
             >
-              {loading ? "生成中..." : "生成周报"}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12"/>
+                  </svg>
+                  AI 生成中...
+                </span>
+              ) : "生成周报"}
             </button>
           </div>
         </div>
@@ -259,24 +301,32 @@ export default function GeneratePage() {
 
       {/* Step 3: Preview & Edit */}
       {step === 3 && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="font-semibold mb-3">周报预览</h2>
+        <div className="space-y-5 animate-fade-in-up">
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">周报预览</h2>
+              <span className="badge badge-accent">可编辑</span>
+            </div>
             <textarea
               value={report}
               onChange={(e) => setReport(e.target.value)}
-              className="w-full h-96 border border-gray-300 rounded p-3 text-sm font-mono"
+              className="w-full h-[400px] bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-[var(--radius)] p-4 text-sm text-[var(--text-primary)] font-mono leading-relaxed resize-y focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)] outline-none transition-all"
             />
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep(2)} className="border border-gray-300 px-4 py-2 rounded text-sm">
+            <button onClick={() => setStep(2)} className="btn btn-secondary">
               返回修改
             </button>
-            <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              保存
+            <button onClick={handleSave} className="btn btn-primary">
+              保存周报
             </button>
-            <button onClick={handleExport} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            <button onClick={handleExport} className="btn btn-success">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
               导出 Markdown
             </button>
           </div>
