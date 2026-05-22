@@ -29,6 +29,7 @@ export default function GeneratePage() {
   const [selectedRepoIds, setSelectedRepoIds] = useState<number[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [defaultMemberIds, setDefaultMemberIds] = useState<number[]>([]);
   const [since, setSince] = useState("");
   const [until, setUntil] = useState("");
   const [commits, setCommits] = useState<Commit[]>([]);
@@ -56,7 +57,18 @@ export default function GeneratePage() {
     fetch("/api/repos").then((r) => r.json()).then((data) => setRepos(Array.isArray(data) ? data : []));
   }, []);
 
-  // Load members when repos change
+  // Load default member setting
+  useEffect(() => {
+    fetch("/api/settings").then((r) => r.json()).then((data) => {
+      if (data.default_member_ids) {
+        try {
+          setDefaultMemberIds(JSON.parse(data.default_member_ids) as number[]);
+        } catch {}
+      }
+    });
+  }, []);
+
+  // Load members when repos change, and auto-select defaults
   useEffect(() => {
     if (selectedRepoIds.length === 0) {
       setMembers([]);
@@ -64,8 +76,18 @@ export default function GeneratePage() {
     }
     fetch(`/api/members?repoIds=${selectedRepoIds.join(",")}`)
       .then((r) => r.json())
-      .then((data) => setMembers(Array.isArray(data) ? data : []));
-  }, [selectedRepoIds]);
+      .then((data) => {
+        const memberList = Array.isArray(data) ? data : [];
+        setMembers(memberList);
+        // Auto-select default members when available
+        if (defaultMemberIds.length > 0) {
+          const auto = memberList.filter((m: Member) => defaultMemberIds.includes(m.id)).map((m: Member) => m.id);
+          setSelectedMemberIds(auto);
+        } else {
+          setSelectedMemberIds([]);
+        }
+      });
+  }, [selectedRepoIds, defaultMemberIds]);
 
   const toggleRepo = (id: number) => {
     setSelectedRepoIds((prev) =>
