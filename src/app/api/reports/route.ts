@@ -4,7 +4,14 @@ import { exportReportToMarkdown, generateReport } from "@/lib/report";
 
 function resolveMembers(memberIds: number[]) {
   const members = getMembersByIds(memberIds);
-  return members.map((m) => m.display_name || m.name);
+  const seen = new Set<string>();
+  return members
+    .map((m) => m.display_name || m.name)
+    .filter((name) => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
 }
 
 export async function GET(request: NextRequest) {
