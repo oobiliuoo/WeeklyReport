@@ -98,6 +98,12 @@ export function updateMemberDisplayName(id: number, displayName: string) {
   getDb().prepare("UPDATE members SET display_name = ? WHERE id = ?").run(displayName, id);
 }
 
+export function getMembersByIds(ids: number[]): MemberRow[] {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(",");
+  return getDb().prepare(`SELECT * FROM members WHERE id IN (${placeholders})`).all(...ids) as MemberRow[];
+}
+
 // Reports
 export function getReports() {
   return getDb().prepare("SELECT * FROM reports ORDER BY week_start DESC").all() as ReportRow[];

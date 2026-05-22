@@ -8,6 +8,7 @@ interface Report {
   week_end: string;
   content: string;
   created_at: string;
+  members?: string[];
 }
 
 export default function HomePage() {
@@ -102,6 +103,17 @@ export default function HomePage() {
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {new Date(report.created_at).toLocaleString("zh-CN")}
                   </p>
+                  {report.members && report.members.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                      <span className="text-xs text-[var(--text-muted)]">{report.members.join("、")}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -151,6 +163,17 @@ export default function HomePage() {
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {new Date(viewing.created_at).toLocaleString("zh-CN")}
                   </p>
+                  {viewing.members && viewing.members.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                      <span className="text-xs text-[var(--text-muted)]">{viewing.members.join("、")}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

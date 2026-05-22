@@ -3,17 +3,17 @@ import path from "path";
 import { CommitInfo } from "./git";
 import { generateReportWithLLM, classifyCommitsByRules } from "./llm";
 
-export async function generateReport(commits: CommitInfo[], weekStart: string, weekEnd: string): Promise<string> {
+export async function generateReport(commits: CommitInfo[], weekStart: string, weekEnd: string, memberNames: string[]): Promise<string> {
   if (commits.length === 0) {
     return "本周无提交记录。";
   }
 
   try {
-    const content = await generateReportWithLLM(commits);
+    const content = await generateReportWithLLM(commits, memberNames);
     return `# 周报 ${weekStart} ~ ${weekEnd}\n\n${content}`;
   } catch {
     // Fallback to rule-based classification
-    const content = classifyCommitsByRules(commits);
+    const content = classifyCommitsByRules(commits, memberNames);
     return `# 周报 ${weekStart} ~ ${weekEnd}\n\n> ⚠️ LLM 不可用，以下为规则自动分类结果\n\n${content}`;
   }
 }

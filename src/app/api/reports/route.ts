@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReports, getReportById, saveReport, updateReport, deleteReport } from "@/lib/db";
+import { getReports, getReportById, saveReport, updateReport, deleteReport, getMembersByIds } from "@/lib/db";
 import { exportReportToMarkdown, generateReport } from "@/lib/report";
+
+function resolveMembers(memberIds: number[]) {
+  const members = getMembersByIds(memberIds);
+  return members.map((m) => m.display_name || m.name);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,11 +23,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ filePath });
     }
 
-    return NextResponse.json(report);
+    const memberIds = JSON.parse(report.member_ids || "[]") as number[];
+    return NextResponse.json({ ...report, members: resolveMembers(memberIds) });
   }
 
   const reports = getReports();
-  return NextResponse.json(reports);
+  const enriched = reports.map((r) => {
+    const memberIds = JSON.parse(r.member_ids || "[]") as number[];
+    return { ...r, members: resolveMembers(memberIds) };
+  });
+  return NextResponse.json(enriched);
 }
 
 export async function POST(request: NextRequest) {
@@ -36,7 +46,8 @@ export async function POST(request: NextRequest) {
   // If commits are provided, generate report via LLM
   let content = body.content;
   if (commits && Array.isArray(commits) && commits.length > 0) {
-    content = await generateReport(commits, weekStart, weekEnd);
+    const memberNames = resolveMembers(memberIds as number[]);
+    content = await generateReport(commits, weekStart, weekEnd, memberNames);
   }
 
   if (!content) {
@@ -45,7 +56,8 @@ export async function POST(request: NextRequest) {
 
   const id = saveReport(weekStart, weekEnd, content, memberIds, repoIds);
   const report = getReportById(Number(id));
-  return NextResponse.json(report, { status: 201 });
+  const memberNames = resolveMembers(JSON.parse(report!.member_ids || "[]") as number[]);
+  return NextResponse.json({ ...report, members: memberNames }, { status: 201 });
 }
 
 export async function PUT(request: NextRequest) {
@@ -58,6 +70,7 @@ export async function PUT(request: NextRequest) {
 
   updateReport(id, content);
   const report = getReportById(id);
+  if (!report) return NextResponse.json({ error: "周报不存在" }, { status: 404 });
   return NextResponse.json(report);
 }
 
