@@ -18,6 +18,7 @@ export default function HomePage() {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sortBy, setSortBy] = useState<"week-desc" | "week-asc" | "created-desc">("week-desc");
 
   useEffect(() => {
     fetch("/api/reports")
@@ -72,6 +73,14 @@ export default function HomePage() {
     return `${d.getMonth() + 1}月${d.getDate()}日`;
   };
 
+  const sortOptions: Record<string, { label: string; fn: (a: Report, b: Report) => number }> = {
+    "week-desc": { label: "周次 ↓", fn: (a, b) => b.week_start.localeCompare(a.week_start) },
+    "week-asc": { label: "周次 ↑", fn: (a, b) => a.week_start.localeCompare(b.week_start) },
+    "created-desc": { label: "生成时间 ↓", fn: (a, b) => b.created_at.localeCompare(a.created_at) },
+  };
+
+  const sortedReports = [...reports].sort(sortOptions[sortBy].fn);
+
   return (
     <div>
       {/* Header */}
@@ -80,13 +89,30 @@ export default function HomePage() {
           <p className="section-label">Weekly Report</p>
           <h1 className="page-title">周报</h1>
         </div>
-        <a href="/generate" className="btn btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          生成本周周报
-        </a>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-lg border border-[var(--border-subtle)] overflow-hidden">
+            {Object.entries(sortOptions).map(([key, opt]) => (
+              <button
+                key={key}
+                onClick={() => setSortBy(key as typeof sortBy)}
+                className={`px-3 py-1.5 text-xs font-medium transition-all ${
+                  sortBy === key
+                    ? "bg-[var(--accent)] text-[var(--bg-primary)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] bg-transparent"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <a href="/generate" className="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            生成本周周报
+          </a>
+        </div>
       </div>
 
       {/* Loading */}
@@ -116,7 +142,7 @@ export default function HomePage() {
 
       {/* Report list */}
       <div className="space-y-4">
-        {reports.map((report, i) => (
+        {sortedReports.map((report, i) => (
           <div
             key={report.id}
             className={`card p-5 animate-fade-in-up stagger-${Math.min(i + 1, 8)} cursor-pointer`}
