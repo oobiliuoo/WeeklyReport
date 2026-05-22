@@ -5,19 +5,30 @@ import { CommitInfo } from "./git";
 const SYSTEM_PROMPT = `你是一个周报生成助手。根据用户提供的 git 提交记录，生成本周工作周报。
 
 要求：
-1. 按以下分类归纳：新功能、修复、重构、文档、其他
-2. 每个分类下用简洁的中文描述工作内容
-3. 合并相关的提交（如多个提交属于同一功能）
-4. 保留关键的技术细节
-5. 在每个分类项后标注贡献者（如 [@name]）
-6. 在周报末尾列出参与人员名单
-7. 输出格式为 Markdown，每个分类用二级标题
-8. 如果某个分类没有内容，则不输出该分类`;
+1. 如果涉及多个项目，先用二级标题 ## 按项目名称分组，在每个项目分组内再用三级标题 ### 按以下分类归纳：新功能、修复、重构、文档、其他
+2. 如果仅单个项目，直接按以下分类归纳：新功能、修复、重构、文档、其他
+3. 每个分类项下用简洁的中文描述工作内容
+4. 合并相关的提交（如多个提交属于同一功能）
+5. 保留关键的技术细节
+6. 在每个分类项后标注贡献者（如 [@name]）
+7. 在周报末尾列出参与人员名单
+8. 输出格式为 Markdown
+9. 如果某个分类没有内容，则不输出该分类`;
 
 function formatCommits(commits: CommitInfo[]): string {
-  return commits
-    .map((c) => `- [${c.date}] ${c.authorName}: ${c.message}`)
-    .join("\n");
+  // Group by repo name for display
+  const grouped: Record<string, string[]> = {};
+  for (const c of commits) {
+    const repo = c.repoName || "default";
+    if (!grouped[repo]) grouped[repo] = [];
+    grouped[repo].push(`  - [${c.date}] ${c.authorName}: ${c.message}`);
+  }
+
+  let result = "";
+  for (const [repo, items] of Object.entries(grouped)) {
+    result += `[${repo}]\n${items.join("\n")}\n\n`;
+  }
+  return result.trim();
 }
 
 export async function generateReportWithLLM(commits: CommitInfo[], memberNames: string[]): Promise<string> {
@@ -50,13 +61,13 @@ export async function generateReportWithLLM(commits: CommitInfo[], memberNames: 
 
 // Fallback: rule-based classification when LLM is unavailable
 export function classifyCommitsByRules(commits: CommitInfo[], memberNames: string[]): string {
-  const categories: Record<string, { items: string[]; authors: Set<string> }> = {
-    "新功能": { items: [], authors: new Set() },
-    "修复": { items: [], authors: new Set() },
-    "重构": { items: [], authors: new Set() },
-    "文档": { items: [], authors: new Set() },
-    "其他": { items: [], authors: new Set() },
-  };
+  // Group commits by repo first
+  const repos: Record<string, CommitInfo[]> = {};
+  for (const commit of commits) {
+    const repo = commit.repoName || "default";
+    if (!repos[repo]) repos[repo] = [];
+    repos[repo].push(commit);
+  }
 
   const patterns: Record<string, RegExp> = {
     "新功能": /^(feat|add|feature|新增|添加)/i,
@@ -65,38 +76,50 @@ export function classifyCommitsByRules(commits: CommitInfo[], memberNames: strin
     "文档": /^(docs|doc|文档|readme)/i,
   };
 
-  for (const commit of commits) {
-    const msg = commit.message;
-    let classified = false;
-    for (const [category, pattern] of Object.entries(patterns)) {
-      if (pattern.test(msg)) {
-        categories[category].items.push(msg);
-        categories[category].authors.add(commit.authorName);
-        classified = true;
-        break;
-      }
-    }
-    if (!classified) {
-      categories["其他"].items.push(msg);
-      categories["其他"].authors.add(commit.authorName);
-    }
-  }
-
   let markdown = "";
-  for (const [category, { items, authors }] of Object.entries(categories)) {
-    if (items.length === 0) continue;
-    markdown += `## ${category}\n\n`;
-    for (const item of items) {
-      markdown += `- ${item}\n`;
+  const allAuthors = new Set<string>();
+
+  for (const [repoName, repoCommits] of Object.entries(repos)) {
+    const categories: Record<string, { items: string[]; authors: Set<string> }> = {
+      "新功能": { items: [], authors: new Set() },
+      "修复": { items: [], authors: new Set() },
+      "重构": { items: [], authors: new Set() },
+      "文档": { items: [], authors: new Set() },
+      "其他": { items: [], authors: new Set() },
+    };
+
+    for (const commit of repoCommits) {
+      const msg = commit.message;
+      let classified = false;
+      for (const [category, pattern] of Object.entries(patterns)) {
+        if (pattern.test(msg)) {
+          categories[category].items.push(msg);
+          categories[category].authors.add(commit.authorName);
+          classified = true;
+          break;
+        }
+      }
+      if (!classified) {
+        categories["其他"].items.push(msg);
+        categories["其他"].authors.add(commit.authorName);
+      }
+      allAuthors.add(commit.authorName);
     }
-    markdown += "\n";
+
+    if (Object.keys(repos).length > 1) {
+      markdown += `## ${repoName}\n\n`;
+    }
+    for (const [category, { items, authors }] of Object.entries(categories)) {
+      if (items.length === 0) continue;
+      markdown += `### ${category}\n\n`;
+      for (const item of items) {
+        markdown += `- ${item}\n`;
+      }
+      markdown += "\n";
+    }
   }
 
   // Add members section
-  const allAuthors = new Set<string>();
-  for (const cat of Object.values(categories)) {
-    for (const a of cat.authors) allAuthors.add(a);
-  }
   const displayNames = memberNames.length > 0 ? memberNames : [...allAuthors];
   markdown += `---\n\n**参与人员：** ${displayNames.join("、")}\n`;
 

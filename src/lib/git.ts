@@ -8,6 +8,7 @@ export interface CommitInfo {
   message: string;
   authorName: string;
   authorEmail: string;
+  repoName?: string;
 }
 
 export interface ContributorInfo {

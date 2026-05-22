@@ -30,12 +30,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Fetch commits from all repos in parallel
+  // Fetch commits from all repos in parallel, with repo info
   const allCommits = await Promise.all(
     ids.map(async (repoId) => {
       const repo = getRepoById(repoId);
       if (!repo) return [];
-      return getCommits(repo.path, authors, since, until);
+      const commits = await getCommits(repo.path, authors, since, until);
+      return commits.map((c) => ({ ...c, repoName: repo.name }));
     })
   );
 
