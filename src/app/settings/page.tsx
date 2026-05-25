@@ -43,7 +43,16 @@ export default function SettingsPage() {
       }
       return [];
     }).then((members) => {
-      setAllMembers(Array.isArray(members) ? members : []);
+      const raw = Array.isArray(members) ? members : [];
+      // Deduplicate by display name across repos
+      const seen = new Set<string>();
+      const deduped = raw.filter((m: Member) => {
+        const key = m.display_name || m.name;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setAllMembers(deduped);
       setLoadingMembers(false);
     }).catch(() => setLoadingMembers(false));
   }, []);

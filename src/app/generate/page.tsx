@@ -77,12 +77,30 @@ export default function GeneratePage() {
     fetch(`/api/members?repoIds=${selectedRepoIds.join(",")}`)
       .then((r) => r.json())
       .then((data) => {
-        const memberList = Array.isArray(data) ? data : [];
+        const raw = Array.isArray(data) ? data : [];
+        // Deduplicate by display name across repos
+        const seen = new Set<string>();
+        const memberList = raw.filter((m: Member) => {
+          const key = m.display_name || m.name;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
         setMembers(memberList);
         // Auto-select default members when available
+        // Match by ID first, then fallback to name match for cross-repo dedup
         if (defaultMemberIds.length > 0) {
-          const auto = memberList.filter((m: Member) => defaultMemberIds.includes(m.id)).map((m: Member) => m.id);
-          setSelectedMemberIds(auto);
+          const byId = memberList.filter((m: Member) => defaultMemberIds.includes(m.id)).map((m: Member) => m.id);
+          if (byId.length > 0) {
+            setSelectedMemberIds(byId);
+          } else {
+            // Name fallback: match defaults to current members by display name
+            const defaultNames = new Set(
+              raw.filter((m: Member) => defaultMemberIds.includes(m.id)).map((m: Member) => m.display_name || m.name)
+            );
+            const byName = memberList.filter((m: Member) => defaultNames.has(m.display_name || m.name)).map((m: Member) => m.id);
+            setSelectedMemberIds(byName);
+          }
         } else {
           setSelectedMemberIds([]);
         }
