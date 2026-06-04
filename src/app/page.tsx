@@ -20,6 +20,8 @@ export default function HomePage() {
   const [saving, setSaving] = useState(false);
   const [sortBy, setSortBy] = useState<"week-desc" | "week-asc" | "created-desc">("week-desc");
 
+  const [sending, setSending] = useState<number | null>(null);
+
   useEffect(() => {
     fetch("/api/reports")
       .then((r) => r.json())
@@ -40,6 +42,26 @@ export default function HomePage() {
   const handleExport = async (id: number) => {
     const res = await fetch(`/api/reports?id=${id}&action=export`).then((r) => r.json());
     alert(`已导出到: ${res.filePath}`);
+  };
+
+  const handleDingTalk = async (id: number) => {
+    setSending(id);
+    try {
+      const res = await fetch("/api/dingtalk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("已推送到钉钉群");
+      } else {
+        alert(`推送失败: ${data.error}`);
+      }
+    } catch {
+      alert("推送失败，请检查网络");
+    }
+    setSending(null);
   };
 
   const startEdit = () => {
@@ -172,6 +194,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => handleDingTalk(report.id)} disabled={sending === report.id} className="btn-ghost" title="推送到钉钉群">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  {sending === report.id ? "发送中" : "钉钉"}
+                </button>
                 <button onClick={() => handleExport(report.id)} className="btn-ghost">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -252,6 +280,12 @@ export default function HomePage() {
                     </button>
                     <button onClick={() => handleExport(viewing.id)} className="btn btn-secondary text-xs py-1.5 px-3">
                       导出
+                    </button>
+                    <button onClick={() => handleDingTalk(viewing.id)} disabled={sending === viewing.id} className="btn btn-secondary text-xs py-1.5 px-3">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      {sending === viewing.id ? "发送中" : "钉钉"}
                     </button>
                     <button onClick={() => { handleDelete(viewing.id); }} className="btn-danger btn text-xs py-1.5 px-3">
                       删除
