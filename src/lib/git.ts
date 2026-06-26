@@ -60,7 +60,12 @@ export async function getCommits(
 ): Promise<CommitInfo[]> {
   const git: SimpleGit = simpleGit(repoPath);
 
-  const result = await git.log(["--all", `--since=${since}`, `--until=${until}`]);
+  // Git --until is exclusive (<), so add 1 day to make the end date inclusive
+  const untilDate = new Date(until);
+  untilDate.setDate(untilDate.getDate() + 1);
+  const untilInclusive = untilDate.toISOString().slice(0, 10);
+
+  const result = await git.log(["--all", `--since=${since}`, `--until=${untilInclusive}`]);
 
   const commits: CommitInfo[] = [];
   for (const entry of result.all) {

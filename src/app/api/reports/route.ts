@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReports, getReportById, saveReport, updateReport, deleteReport, getMembersByIds } from "@/lib/db";
+import { getReports, getReportById, saveReport, updateReport, deleteReport, getMembersByIds, getRepoById, getMembersByRepoId } from "@/lib/db";
 import { exportReportToMarkdown, generateReport } from "@/lib/report";
+import { getCommits } from "@/lib/git";
 
 function resolveMembers(memberIds: number[]) {
   const members = getMembersByIds(memberIds);
@@ -28,6 +29,48 @@ export async function GET(request: NextRequest) {
     if (action === "export") {
       const filePath = exportReportToMarkdown(report.content, report.week_start, report.week_end);
       return NextResponse.json({ filePath });
+    }
+
+    if (action === "regenerate") {
+      const memberIds = JSON.parse(report.member_ids || "[]") as number[];
+      const repoIds = JSON.parse(report.repo_ids || "[]") as number[];
+
+      // Collect author names/emails for filtering
+      const authors: string[] = [];
+      if (memberIds.length > 0) {
+        for (const repoId of repoIds) {
+          const members = getMembersByRepoId(repoId);
+          for (const m of members) {
+            if (memberIds.includes(m.id)) {
+              authors.push(m.name);
+              authors.push(m.email);
+            }
+          }
+        }
+      }
+
+      // Re-fetch commits from all repos
+      const allCommits = await Promise.all(
+        repoIds.map(async (repoId: number) => {
+          const repo = getRepoById(repoId);
+          if (!repo) return [];
+          const commits = await getCommits(repo.path, authors, report.week_start, report.week_end);
+          return commits.map((c) => ({ ...c, repoName: repo.name }));
+        })
+      );
+      const commits = allCommits.flat().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (commits.length === 0) {
+        return NextResponse.json({ error: "所选时间范围内无提交记录，无法重新生成" }, { status: 400 });
+      }
+
+      // Regenerate report content
+      const memberNames = resolveMembers(memberIds);
+      const content = await generateReport(commits, report.week_start, report.week_end, memberNames);
+      updateReport(report.id, content);
+
+      const updated = getReportById(report.id);
+      return NextResponse.json({ ...updated, members: resolveMembers(JSON.parse(updated!.member_ids || "[]") as number[]) });
     }
 
     const memberIds = JSON.parse(report.member_ids || "[]") as number[];

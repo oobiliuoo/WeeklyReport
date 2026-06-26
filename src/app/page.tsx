@@ -21,6 +21,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<"week-desc" | "week-asc" | "created-desc">("week-desc");
 
   const [sending, setSending] = useState<number | null>(null);
+  const [regenerating, setRegenerating] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/reports")
@@ -62,6 +63,26 @@ export default function HomePage() {
       alert("推送失败，请检查网络");
     }
     setSending(null);
+  };
+
+  const handleRegenerate = async (id: number) => {
+    if (!confirm("将重新查询提交记录并覆盖当前周报内容，确定继续？")) return;
+    setRegenerating(id);
+    try {
+      const res = await fetch(`/api/reports?id=${id}&action=regenerate`);
+      const data = await res.json();
+      if (data.error) {
+        alert(`重新生成失败: ${data.error}`);
+      } else {
+        const updated = { ...data };
+        setReports(reports.map((r) => (r.id === id ? updated : r)));
+        if (viewing?.id === id) setViewing(updated);
+        alert("重新生成完成");
+      }
+    } catch {
+      alert("重新生成失败，请检查网络");
+    }
+    setRegenerating(null);
   };
 
   const startEdit = () => {
@@ -200,6 +221,13 @@ export default function HomePage() {
                   </svg>
                   {sending === report.id ? "发送中" : "钉钉"}
                 </button>
+                <button onClick={() => handleRegenerate(report.id)} disabled={regenerating === report.id} className="btn-ghost" title="重新生成周报">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  {regenerating === report.id ? "生成中" : "重新生成"}
+                </button>
                 <button onClick={() => handleExport(report.id)} className="btn-ghost">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -286,6 +314,13 @@ export default function HomePage() {
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                       </svg>
                       {sending === viewing.id ? "发送中" : "钉钉"}
+                    </button>
+                    <button onClick={() => handleRegenerate(viewing.id)} disabled={regenerating === viewing.id} className="btn btn-secondary text-xs py-1.5 px-3">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                      </svg>
+                      {regenerating === viewing.id ? "生成中" : "重新生成"}
                     </button>
                     <button onClick={() => { handleDelete(viewing.id); }} className="btn-danger btn text-xs py-1.5 px-3">
                       删除
